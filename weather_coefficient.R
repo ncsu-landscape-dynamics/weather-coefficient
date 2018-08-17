@@ -5,11 +5,12 @@ library(ncdf4)
 library(sp)
 #library(googledrive)
 
-weather_coefficient <- function(directory, output_directory, start, end, time_step, states_of_interest= c('California'), pest, 
-                          prcp_index = 'NO', prcp_method = "threshold",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
-                          prcp_thresh = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0,
-                          temp_index = 'YES', temp_method = "polynomial", temp_a0 = 0, temp_a1 = 0, temp_a2 = 0, temp_a3 = 0, 
-                          temp_thresh = 0, temp_x1mod = 0, temp_x2mod = 0, temp_x3mod = 0) {
+weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
+                                reference_area = NULL, pest, 
+                                prcp_index = 'NO', prcp_method = "reclass",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
+                                prcp_thresh = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0,
+                                temp_index = 'YES', temp_method = "polynomial", temp_a0 = 0, temp_a1 = 0, temp_a2 = 0, temp_a3 = 0, 
+                                temp_thresh = 0, temp_x1mod = 0, temp_x2mod = 0, temp_x3mod = 0) {
   
   ## create time range
   time_range <- seq(start, end, 1)
@@ -19,6 +20,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     precip_files <- list.files(directory,pattern='prcp', full.names = FALSE)
     prcp <- stack() # Create raster stack for the area of interest and years of interest from Daymet data
     dates <- substr(precip_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
+    total_years <- length(precip_files) # number of years to clip
     precip_files <- precip_files[dates %in% time_range]
   } 
   
@@ -27,6 +29,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     tmin_files <- list.files(directory,pattern='tmin', full.names = FALSE)
     if(prcp_index == 'NO'){
       dates <- substr(tmax_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
+      total_years <- length(temp_files) # number of years to clip
     }
     tmin_files <- tmin_files[dates %in% time_range]
     tmax_files <- tmax_files[dates %in% time_range]
@@ -37,11 +40,17 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   }
   
   ## reference shapefile used to clip, project, and resample 
-  states <- readOGR("C:/Users/cmjone25/Google Drive/California/us_states_lccproj.shp") # link to your local copy
-  reference_area <- states[states@data$STATE_NAME %in% states_of_interest,]
-  rm(states)
+  if (study_area == "states"){
+    states <- readOGR("C:/Users/Chris/Desktop/states/us_states_lccproj.shp") # link to your local copy
+    reference_area <- states[states@data$STATE_NAME %in% states_of_interest,]
+    rm(states)
+  } else if (study_area == "raster"){
+    reference_area <- reference_area
+  }
+
   
-  for (i in 1:length(precip_files)) {
+  
+  for (i in 1:total_years) {
     ## Precipitation 
     if(prcp_index == 'YES'){
       precip <- stack(paste(directory,"/",precip_files[[i]], sep = ""), varname = "prcp")
@@ -86,15 +95,15 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     }
   }
   
-  ## Create temperature and/or precipitation indices if method is threshold
-  if (prcp_index == 'YES' && prcp_method == "threshold"){
+  ## Create temperature and/or precipitation indices if method is reclass
+  if (prcp_index == 'YES' && prcp_method == "reclass"){
     pm <- c(0, prcp_thresh, 0,  prcp_thresh, Inf, 1)
     prcp_reclass <- matrix(pm, ncol=3, byrow=TRUE)
     prcp_coeff <- reclassify(prcp,prcp_reclass)
     prcp_coeff <- stackApply(prcp_coeff, indices, fun=mean)
   }
   
-  if (temp_index == 'YES' && temp_method == "threshold"){
+  if (temp_index == 'YES' && temp_method == "reclass"){
     tm <- c(0, temp_thresh, 0,  temp_thresh, Inf, 1)
     temp_reclass <- matrix(tm, ncol=3, byrow=TRUE)
     temp_coeff <- reclassify(temp,temp_reclass)
@@ -120,7 +129,10 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   dir.create(output_directory)
   
   ## Write outputs as raster format to output directory
-  writeRaster(x=prcp_coeff, filename = paste(output_directory, "/prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
-  writeRaster(x=temp_coeff, filename = paste(output_directory, "/temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
-  
+  if(prcp_index == 'YES'){
+    writeRaster(x=prcp_coeff, filename = paste(output_directory, "/prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+  }
+  if(temp_index == 'YES'){
+    writeRaster(x=temp_coeff, filename = paste(output_directory, "/temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+  }
 }

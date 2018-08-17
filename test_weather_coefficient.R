@@ -4,12 +4,12 @@ source("weather_coefficient.R")
 start <-  2014
 end <- 2017
 time_step <- "monthly"
-directory <- "C:/Users/cmjone25/Google Drive/DaymetUS"
-output_directory <- "C:/Users/cmjone25/Google Drive/DaymetUS/test"
+directory <- "G:/DaymetUS"
+output_directory <- "G:/DaymetUS/test"
 states_of_interest <- c('Maryland')
 pest <- "SLF"
 prcp_index = 'YES'
-prcp_method = "threshold" 
+prcp_method = "reclass" # either reclass or polynomial
 prcp_a0 = 0
 prcp_a1 = 0 
 prcp_a2 = 0 
@@ -19,7 +19,7 @@ prcp_x2mod = 0
 prcp_x3mod = 0
 prcp_thresh = 2.5
 temp_index = 'YES' 
-temp_method = "polynomial" 
+temp_method = "polynomial"  # either reclass or polynomial
 temp_a0 = -0.066
 temp_a1 = 0.056
 temp_a2 = -0.0036
