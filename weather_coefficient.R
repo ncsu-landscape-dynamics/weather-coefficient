@@ -8,9 +8,9 @@ library(sp)
 weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
                                 reference_area = NULL, pest, 
                                 prcp_index = 'NO', prcp_method = "reclass",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
-                                prcp_thresh = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0,
+                                prcp_matrix = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0,
                                 temp_index = 'YES', temp_method = "polynomial", temp_a0 = 0, temp_a1 = 0, temp_a2 = 0, temp_a3 = 0, 
-                                temp_thresh = 0, temp_x1mod = 0, temp_x2mod = 0, temp_x3mod = 0) {
+                                temp_matrix = 0, temp_x1mod = 0, temp_x2mod = 0, temp_x3mod = 0) {
   
   ## create time range
   time_range <- seq(start, end, 1)
@@ -20,23 +20,21 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     precip_files <- list.files(directory,pattern='prcp', full.names = FALSE)
     prcp <- stack() # Create raster stack for the area of interest and years of interest from Daymet data
     dates <- substr(precip_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
-    total_years <- length(precip_files) # number of years to clip
     precip_files <- precip_files[dates %in% time_range]
+    total_years <- length(precip_files) # number of years to clip
   } 
   
   if(temp_index == 'YES'){
     tmax_files <- list.files(directory,pattern='tmax', full.names = FALSE)
     tmin_files <- list.files(directory,pattern='tmin', full.names = FALSE)
-    if(prcp_index == 'NO'){
-      dates <- substr(tmax_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
-      total_years <- length(temp_files) # number of years to clip
-    }
+    dates <- substr(tmax_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
     tmin_files <- tmin_files[dates %in% time_range]
     tmax_files <- tmax_files[dates %in% time_range]
     ## Create raster stacks for the area of interest and years of interest from Daymet data
     tmin_s <- stack()
     tmax_s <- stack()
     tavg_s <- stack()
+    total_years <- length(tmin_files) # number of years to clip
   }
   
   ## reference shapefile used to clip, project, and resample 
@@ -97,16 +95,12 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   
   ## Create temperature and/or precipitation indices if method is reclass
   if (prcp_index == 'YES' && prcp_method == "reclass"){
-    pm <- c(0, prcp_thresh, 0,  prcp_thresh, Inf, 1)
-    prcp_reclass <- matrix(pm, ncol=3, byrow=TRUE)
-    prcp_coeff <- reclassify(prcp,prcp_reclass)
+    prcp_coeff <- reclassify(prcp,prcp_matrix)
     prcp_coeff <- stackApply(prcp_coeff, indices, fun=mean)
   }
   
   if (temp_index == 'YES' && temp_method == "reclass"){
-    tm <- c(0, temp_thresh, 0,  temp_thresh, Inf, 1)
-    temp_reclass <- matrix(tm, ncol=3, byrow=TRUE)
-    temp_coeff <- reclassify(temp,temp_reclass)
+    temp_coeff <- reclassify(tavg_s,temp_matrix)
     temp_coeff <- stackApply(temp_coeff, indices, fun=mean)
   }
   
