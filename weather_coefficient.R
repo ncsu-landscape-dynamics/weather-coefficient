@@ -3,10 +3,11 @@ library(rgdal)
 library(raster)
 library(ncdf4)
 library(sp)
+library(stringr)
 #library(googledrive)
 
 weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
-                                reference_area = NULL, pest, 
+                                reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01",
                                 prcp_index = 'NO', prcp_method = "reclass",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
                                 prcp_matrix = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0,
                                 temp_index = 'YES', temp_method = "polynomial", temp_a0 = 0, temp_a1 = 0, temp_a2 = 0, temp_a3 = 0, 
@@ -35,6 +36,10 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     tmax_s <- stack()
     tavg_s <- stack()
     total_years <- length(tmin_files) # number of years to clip
+  }
+  
+  if(lethal_temperature == 'YES') {
+    lethal_temp_stack = stack()
   }
   
   ## reference shapefile used to clip, project, and resample 
@@ -74,6 +79,16 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
       tmin_s <- stack(tmin, tmin_s)
       tmax_s <- stack(tmax, tmax_s)
       tavg_s <- stack(tavg, tavg_s)
+      if (lethal_temperature == 'YES') {
+        lethal_index <- which(str_sub(names(tmin), 7,8) == lethal_month)
+        lethal_rast <- tavg[[lethal_index]]
+        if(lethal_min == 'YES') {
+          lethal_temp <- stackApply(lethal_rast, indices = rep(1,nlayers(lethal_rast)), fun=min)
+        } else {
+          lethal_temp <- stackApply(lethal_rast, indices = rep(1,nlayers(lethal_rast)), fun=max)
+        } 
+        lethal_temp_stack <- stack(lethal_temp_stack, lethal_temp)
+      }
     }
     print(i)
   }
@@ -128,5 +143,8 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   }
   if(temp_index == 'YES'){
     writeRaster(x=temp_coeff, filename = paste(output_directory, "/temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+  }
+  if(lethal_temperature == 'YES'){
+    writeRaster(x=lethal_temp_stack, filename = paste(output_directory, "/lethal_temp_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
   }
 }
