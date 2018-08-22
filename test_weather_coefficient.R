@@ -11,6 +11,8 @@ states_of_interest <- c('Maryland')
 lethal_temperature <- 'YES' # YES or NO
 lethal_month ="01" # set to between "01" and "12"
 lethal_min = 'YES' # YES or NO
+lethal_temperature_value = -12
+future_scenarios = 'YES' # True or false
 pest <- "SLF"
 prcp_index = 'YES' # YES or NO
 prcp_method = "reclass" # either reclass or polynomial

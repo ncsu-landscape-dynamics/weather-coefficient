@@ -7,35 +7,44 @@ library(stringr)
 #library(googledrive)
 
 weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
-                                reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01",
+                                reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01", future_scenarios = TRUE,
                                 prcp_index = 'NO', prcp_method = "reclass",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
-                                prcp_matrix = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0,
+                                prcp_matrix = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0, lethal_temperature_value = NULL,
                                 temp_index = 'YES', temp_method = "polynomial", temp_a0 = 0, temp_a1 = 0, temp_a2 = 0, temp_a3 = 0, 
                                 temp_matrix = 0, temp_x1mod = 0, temp_x2mod = 0, temp_x3mod = 0) {
   
   ## create time range
   time_range <- seq(start, end, 1)
+  if(future_scenarios == 'YES'){
+    
+    number_of_years <- length(time_range)
+  }
+  
   
   ## read in list of daymet files to choose from later 
   if(prcp_index == 'YES'){
     precip_files <- list.files(directory,pattern='prcp', full.names = FALSE)
     prcp <- stack() # Create raster stack for the area of interest and years of interest from Daymet data
-    dates <- substr(precip_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
-    precip_files <- precip_files[dates %in% time_range]
+    if(future_scenarios == 'NO'){
+      dates <- substr(precip_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
+      precip_files <- precip_files[dates %in% time_range]
+    }
     total_years <- length(precip_files) # number of years to clip
   } 
   
   if(temp_index == 'YES'){
     tmax_files <- list.files(directory,pattern='tmax', full.names = FALSE)
     tmin_files <- list.files(directory,pattern='tmin', full.names = FALSE)
-    dates <- substr(tmax_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
-    tmin_files <- tmin_files[dates %in% time_range]
-    tmax_files <- tmax_files[dates %in% time_range]
+    if(future_scenarios == 'NO'){
+      dates <- substr(tmax_files,16,19) # Assumes daymet data is saved in the exact naming format that it is downloaded as
+      tmin_files <- tmin_files[dates %in% time_range]
+      tmax_files <- tmax_files[dates %in% time_range]
+    }
+    total_years <- length(tmin_files) # number of years to clip
     ## Create raster stacks for the area of interest and years of interest from Daymet data
     tmin_s <- stack()
     tmax_s <- stack()
     tavg_s <- stack()
-    total_years <- length(tmin_files) # number of years to clip
   }
   
   if(lethal_temperature == 'YES') {
@@ -93,18 +102,70 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     print(i)
   }
   
+  if(temp_index == 'YES'){
+    names(tavg_s) <- names(tmin_s)
+  }
+  
   ## create indices based on timestep
   if(prcp_index =='YES'){
     if(time_step == "daily"){
       indices <- format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%d")
       indices <- as.numeric(indices)
+      indices_weather_ranking <- rep(1,365)
+      new_ind <- indices_weather_ranking
+      for (i in 2:total_years){
+        new_ind <- new_ind+1
+        indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+      }
     } else if(time_step == "weekly"){
       indices <- rep(seq(1,((nlayers(prcp)/7)+1),1),7)
       indices <- indices[1:nlayers(prcp)]
       indices <- indices[order(indices)]
+      indices_weather_ranking <- rep(1,53)
+      new_ind <- indices_weather_ranking
+      for (i in 2:total_years){
+        new_ind <- new_ind+1
+        indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+      }
     } else if(time_step == "monthly"){
       indices <- format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%Y%m")
       indices <- as.numeric(as.factor(indices))
+      indices_weather_ranking <- rep(1,12)
+      new_ind <- indices_weather_ranking
+      for (i in 2:total_years){
+        new_ind <- new_ind+1
+        indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+      }
+    }
+  } else if(prcp_index =='NO'){
+    if(time_step == "daily"){
+      indices <- format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%d")
+      indices <- as.numeric(indices)
+      indices_weather_ranking <- rep(1,365)
+      new_ind <- indices_weather_ranking
+      for (i in 2:total_years){
+        new_ind <- new_ind+1
+        indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+      }
+    } else if(time_step == "weekly"){
+      indices <- rep(seq(1,((nlayers(tavg_s)/7)+1),1),7)
+      indices <- indices[1:nlayers(tavg_s)]
+      indices <- indices[order(indices)]
+      indices_weather_ranking <- rep(1,53)
+      new_ind <- indices_weather_ranking
+      for (i in 2:total_years){
+        new_ind <- new_ind+1
+        indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+      }
+    } else if(time_step == "monthly"){
+      indices <- format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%Y%m")
+      indices <- as.numeric(as.factor(indices))
+      indices_weather_ranking <- rep(1,12)
+      new_ind <- indices_weather_ranking
+      for (i in 2:total_years){
+        new_ind <- new_ind+1
+        indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+      }
     }
   }
   
@@ -133,6 +194,62 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     temp_coeff[temp_coeff < 0] <- 0 # restrain lower limit to 0
     temp_coeff[temp_coeff > 1] <- 1 # restrain upper limit to 1
   }
+  
+  
+  if(future_scenarios == 'YES'){
+    if(prcp_index == 'YES') {
+      prcp_coeff_ranking <- stackApply(prcp_coeff, indices = indices_weather_ranking, fun = mean)
+    }
+    if(temp_index == 'YES') {
+      temp_coeff_ranking <- stackApply(temp_coeff, indices = indices_weather_ranking, fun = mean)
+    }
+    if(lethal_temperature == 'YES') {
+      lethal_temp_matrix <- c(-Inf, lethal_temperature_value, 1, 
+                              lethal_temperature_value, Inf, 2)
+      lethal_temp_matrix <- matrix(lethal_temp_matrix, ncol=3, byrow=TRUE)
+      lethal_temp_area <- reclassify(lethal_temp_stack, lethal_temp_matrix)
+    }
+    
+    first_year <- as.numeric(substr(precip_files[[1]],16,19))
+    last_year <- as.numeric(substr(precip_files[[total_years]],16,19))
+    weather_ranking <- data.frame(year = seq(first_year,last_year,1), lethal_temp_area = rep(0,total_years), avg_temp_coeff = rep(0,total_years), avg_prcp_coeff = rep(0,total_years))
+    for (i in 1:total_years) {
+      cta <- lethal_temp_area[[i]]
+      weather_ranking$lethal_temp_area[i] <- sum(cta[cta == 1])/ncell(cta)
+      weather_ranking$avg_temp_coeff[i] <- mean(temp_coeff_ranking[[i]])
+      weather_ranking$avg_prcp_coeff[i] <- mean(prcp_coeff_ranking[[i]])
+    }
+    if(prcp_index== 'YES' && temp_index == 'YES'){
+      weather_ranking$total_coeff_score <- weather_ranking$avg_temp_coeff*weather_ranking$avg_prcp_coeff-(weather_ranking$lethal_temp_area*0.5)
+    } else if(prcp_index== 'YES' && temp_index == 'NO'){
+      weather_ranking$total_coeff_score <- weather_ranking$avg_prcp_coeff - weather_ranking$lethal_temp_area*0.5
+    } else if(prcp_index== 'No' && temp_index == 'YES'){
+      weather_ranking$total_coeff_score <- weather_ranking$avg_temp_coeff - weather_ranking$lethal_temp_area*0.5
+    } else if(prcp_index== 'NO' && temp_index == 'NO'){
+      weather_ranking$total_coeff_score <- 0-weather_ranking$lethal_temp_area
+    }
+    weather_ranking <- weather_ranking[order(weather_ranking$total_coeff_score, decreasing = TRUE),]
+    weather_ranking$rank <- seq(1,nrow(weather_ranking),1)
+    high_spread <- round(nrow(weather_ranking)*0.33)
+    average_spread <- low+round(nrow(weather_ranking)*0.33)
+    low_spread <- nrow(weather_ranking)
+    high_spread_indices <- sample(1:high_spread, length(time_range), replace = FALSE)
+    average_spread_indices <- sample(high_spread+1:average_spread, length(time_range), replace = FALSE)
+    low_spread_indices <- sample(average_spread+1:low_spread, length(time_range), replace = FALSE)
+    high_spread_coeff_indices <- c()
+    average_spread_coeff_indices <- c()
+    low_spread_coeff_indices <- c()
+    for(i in 1:length(time_range)){
+      high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+12*high_spread_indices[i],12+12*high_spread_indices[i]))
+      average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+12*average_spread_indices[i],12+12*average_spread_indices[i]))
+      low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+12*low_spread_indices[i],12+12*low_spread_indices[i]))
+    }
+    
+    high_spread_lethal_temp <- lethal_temp_stack[[high_spread_indices]]
+    average_spread_lethal_temp <- lethal_temp_stack[[average_spread_indices]]
+    low_spread_lethal_temp <- lethal_temp_stack[[low_spread_indices]]
+  }
+  
   
   ## create directory for writing files
   dir.create(output_directory)
