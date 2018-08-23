@@ -212,12 +212,12 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     
     first_year <- as.numeric(substr(precip_files[[1]],16,19))
     last_year <- as.numeric(substr(precip_files[[total_years]],16,19))
-    weather_ranking <- data.frame(year = seq(first_year,last_year,1), lethal_temp_area = rep(0,total_years), avg_temp_coeff = rep(0,total_years), avg_prcp_coeff = rep(0,total_years))
+    weather_ranking <- data.frame(year = seq(first_year,last_year,1),index = seq(1,total_years,1), lethal_temp_area = rep(0,total_years), avg_temp_coeff = rep(0,total_years), avg_prcp_coeff = rep(0,total_years))
     for (i in 1:total_years) {
       cta <- lethal_temp_area[[i]]
       weather_ranking$lethal_temp_area[i] <- sum(cta[cta == 1])/ncell(cta)
-      weather_ranking$avg_temp_coeff[i] <- mean(temp_coeff_ranking[[i]])
-      weather_ranking$avg_prcp_coeff[i] <- mean(prcp_coeff_ranking[[i]])
+      weather_ranking$avg_temp_coeff[i] <- mean(getValues(temp_coeff_ranking[[i]]), na.rm = TRUE)
+      weather_ranking$avg_prcp_coeff[i] <- mean(getValues(prcp_coeff_ranking[[i]]), na.rm = TRUE)
     }
     if(prcp_index== 'YES' && temp_index == 'YES'){
       weather_ranking$total_coeff_score <- weather_ranking$avg_temp_coeff*weather_ranking$avg_prcp_coeff-(weather_ranking$lethal_temp_area*0.5)
@@ -234,16 +234,24 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     average_spread <- low+round(nrow(weather_ranking)*0.33)
     low_spread <- nrow(weather_ranking)
     high_spread_indices <- sample(1:high_spread, length(time_range), replace = FALSE)
-    average_spread_indices <- sample(high_spread+1:average_spread, length(time_range), replace = FALSE)
-    low_spread_indices <- sample(average_spread+1:low_spread, length(time_range), replace = FALSE)
+    average_spread_indices <- sample((high_spread+1):average_spread, length(time_range), replace = FALSE)
+    low_spread_indices <- sample((average_spread+1):low_spread, length(time_range), replace = FALSE)
+    high_spread_indices <- weather_ranking$index[high_spread_indices]
+    average_spread_indices <- weather_ranking$index[average_spread_indices]
+    low_spread_indices <- weather_ranking$index[low_spread_indices]
     high_spread_coeff_indices <- c()
     average_spread_coeff_indices <- c()
     low_spread_coeff_indices <- c()
     for(i in 1:length(time_range)){
-      high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+12*high_spread_indices[i],12+12*high_spread_indices[i]))
-      average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+12*average_spread_indices[i],12+12*average_spread_indices[i]))
-      low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+12*low_spread_indices[i],12+12*low_spread_indices[i]))
+      high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+12*(high_spread_indices[i]-1),12+12*(high_spread_indices[i]-1)))
+      average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+12*(average_spread_indices[i]-1),12+12*(average_spread_indices[i]-1)))
+      low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+12*(low_spread_indices[i]-1),12+12*(low_spread_indices[i]-1)))
     }
+    
+    high_spread_temp_coeff <- temp_coeff[[high_spread_coeff_indices]]
+    average_spread_temp_coeff <- temp_coeff[[average_spread_coeff_indices]]
+    low_spread_temp_coeff <- temp_coeff[[low_spread_coeff_indices]]
+    
     
     high_spread_lethal_temp <- lethal_temp_stack[[high_spread_indices]]
     average_spread_lethal_temp <- lethal_temp_stack[[average_spread_indices]]
