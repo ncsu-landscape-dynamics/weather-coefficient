@@ -7,7 +7,7 @@ library(stringr)
 #library(googledrive)
 
 weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
-                                reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01", future_scenarios = TRUE,
+                                reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01", future_scenarios = TRUE, lethal_min = 'YES',
                                 prcp_index = 'NO', prcp_method = "reclass",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
                                 prcp_matrix = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0, lethal_temperature_value = NULL,
                                 temp_index = 'YES', temp_method = "polynomial", temp_a0 = 0, temp_a1 = 0, temp_a2 = 0, temp_a3 = 0, 
@@ -226,7 +226,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     weather_ranking <- weather_ranking[order(weather_ranking$total_coeff_score, decreasing = TRUE),]
     weather_ranking$rank <- seq(1,nrow(weather_ranking),1)
     high_spread <- round(nrow(weather_ranking)*0.33)
-    average_spread <- low+round(nrow(weather_ranking)*0.33)
+    average_spread <- high_spread+round(nrow(weather_ranking)*0.33)
     low_spread <- nrow(weather_ranking)
     high_spread_indices <- sample(1:high_spread, length(time_range), replace = FALSE)
     average_spread_indices <- sample((high_spread+1):average_spread, length(time_range), replace = FALSE)
