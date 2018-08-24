@@ -69,6 +69,7 @@ temp_matrix <- matrix(temp_mat, ncol=3, byrow=TRUE)
 
 weather_coefficient(directory = directory, output_directory = output_directory, start = start, end = end, time_step = time_step, 
                     study_area = study_area, states_of_interest = states_of_interest, lethal_temperature = lethal_temperature,
+                    lethal_min = lethal_min, lethal_month = lethal_month, lethal_temperature_value = lethal_temperature_value, future_scenarios = future_scenarios,
                     pest = pest, prcp_index = prcp_index, prcp_method = prcp_method,  prcp_a0 = prcp_a0, prcp_a1 = prcp_a1, prcp_a2 = prcp_a2, prcp_a3 = prcp_a3, 
                     prcp_matrix = prcp_matrix, prcp_x1mod = prcp_x1mod, prcp_x2mod = prcp_x2mod, prcp_x3mod = prcp_x3mod,
                     temp_index = temp_index, temp_method = temp_method, temp_a0 = temp_a0, temp_a1 = temp_a1, temp_a2 = temp_a2, temp_a3 = temp_a3, 

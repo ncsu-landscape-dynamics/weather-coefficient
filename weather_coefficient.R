@@ -16,10 +16,8 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   ## create time range
   time_range <- seq(start, end, 1)
   if(future_scenarios == 'YES'){
-    
     number_of_years <- length(time_range)
   }
-  
   
   ## read in list of daymet files to choose from later 
   if(prcp_index == 'YES'){
@@ -59,8 +57,6 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   } else if (study_area == "raster"){
     reference_area <- reference_area
   }
-
-  
   
   for (i in 1:total_years) {
     ## Precipitation 
@@ -195,7 +191,6 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     temp_coeff[temp_coeff > 1] <- 1 # restrain upper limit to 1
   }
   
-  
   if(future_scenarios == 'YES'){
     if(prcp_index == 'YES') {
       prcp_coeff_ranking <- stackApply(prcp_coeff, indices = indices_weather_ranking, fun = mean)
@@ -243,33 +238,76 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     average_spread_coeff_indices <- c()
     low_spread_coeff_indices <- c()
     for(i in 1:length(time_range)){
-      high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+12*(high_spread_indices[i]-1),12+12*(high_spread_indices[i]-1)))
-      average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+12*(average_spread_indices[i]-1),12+12*(average_spread_indices[i]-1)))
-      low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+12*(low_spread_indices[i]-1),12+12*(low_spread_indices[i]-1)))
+      if(time_step == "daily"){
+        high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+365*(high_spread_indices[i]-1),365+365*(high_spread_indices[i]-1)))
+        average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+365*(average_spread_indices[i]-1),365+365*(average_spread_indices[i]-1)))
+        low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+365*(low_spread_indices[i]-1),365+365*(low_spread_indices[i]-1)))
+      } else if(time_step == "weekly"){
+        high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+52*(high_spread_indices[i]-1),52+52*(high_spread_indices[i]-1)))
+        average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+52*(average_spread_indices[i]-1),52+52*(average_spread_indices[i]-1)))
+        low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+52*(low_spread_indices[i]-1),52+52*(low_spread_indices[i]-1)))
+      } else if(time_step == "monthly"){
+        high_spread_coeff_indices <- c(high_spread_coeff_indices,seq(1+12*(high_spread_indices[i]-1),12+12*(high_spread_indices[i]-1)))
+        average_spread_coeff_indices <- c(average_spread_coeff_indices,seq(1+12*(average_spread_indices[i]-1),12+12*(average_spread_indices[i]-1)))
+        low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+12*(low_spread_indices[i]-1),12+12*(low_spread_indices[i]-1)))
+      }
     }
-    
     high_spread_temp_coeff <- temp_coeff[[high_spread_coeff_indices]]
     average_spread_temp_coeff <- temp_coeff[[average_spread_coeff_indices]]
     low_spread_temp_coeff <- temp_coeff[[low_spread_coeff_indices]]
     
+    high_spread_prcp_coeff <- prcp_coeff[[high_spread_coeff_indices]]
+    average_spread_prcp_coeff <- prcp_coeff[[average_spread_coeff_indices]]
+    low_spread_prcp_coeff <- prcp_coeff[[low_spread_coeff_indices]]
     
     high_spread_lethal_temp <- lethal_temp_stack[[high_spread_indices]]
     average_spread_lethal_temp <- lethal_temp_stack[[average_spread_indices]]
     low_spread_lethal_temp <- lethal_temp_stack[[low_spread_indices]]
   }
   
-  
   ## create directory for writing files
   dir.create(output_directory)
   
   ## Write outputs as raster format to output directory
-  if(prcp_index == 'YES'){
-    writeRaster(x=prcp_coeff, filename = paste(output_directory, "/prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+  if(future_scenarios == 'YES'){
+    data <- list(weather_ranking)
+    if(prcp_index == 'YES'){
+      writeRaster(x=prcp_coeff, filename = paste(output_directory, "/prcp_coeff_", first_year, "_", last_year, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=high_spread_prcp_coeff, filename = paste(output_directory, "/high_spread_prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=average_spread_prcp_coeff, filename = paste(output_directory, "/average_spread_prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=low_spread_prcp_coeff, filename = paste(output_directory, "/low_spread_prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      data <- c(data, average_spread_prcp_coeff, low_spread_prcp_coeff, high_spread_prcp_coeff, prcp_coeff)
+    }
+    if(temp_index == 'YES'){
+      writeRaster(x=temp_coeff, filename = paste(output_directory, "/temp_coeff_", first_year, "_", last_year, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=high_spread_temp_coeff, filename = paste(output_directory, "/high_spread_temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=average_spread_temp_coeff, filename = paste(output_directory, "/average_spread_temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=low_spread_temp_coeff, filename = paste(output_directory, "/low_spread_temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      data <- c(data, average_spread_temp_coeff, low_spread_temp_coeff, high_spread_temp_coeff, temp_coeff)
+      }
+    if(lethal_temperature == 'YES'){
+      writeRaster(x=lethal_temp_stack, filename = paste(output_directory, "/lethal_temp_", first_year, "_", last_year, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=high_spread_lethal_temp, filename = paste(output_directory, "/high_spread_lethal_temp_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=average_spread_lethal_temp, filename = paste(output_directory, "/average_spread_lethal_temp_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      writeRaster(x=low_spread_lethal_temp, filename = paste(output_directory, "/low_spread_lethal_temp_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      data <- c(data, average_spread_lethal_temp, low_spread_lethal_temp, high_spread_lethal_temp, lethal_temp)
+    }
+    
+  } else if(future_scenarios == 'NO'){
+    data <- c()
+    if(prcp_index == 'YES'){
+      writeRaster(x=prcp_coeff, filename = paste(output_directory, "/prcp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      data <- c(data, prcp_coeff)
+    }
+    if(temp_index == 'YES'){
+      writeRaster(x=temp_coeff, filename = paste(output_directory, "/temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      data <- c(data, temp_coeff)
+    }
+    if(lethal_temperature == 'YES'){
+      writeRaster(x=lethal_temp_stack, filename = paste(output_directory, "/lethal_temp_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
+      data <- c(data, lethal_temp_stack)
+    }
   }
-  if(temp_index == 'YES'){
-    writeRaster(x=temp_coeff, filename = paste(output_directory, "/temp_coeff_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
-  }
-  if(lethal_temperature == 'YES'){
-    writeRaster(x=lethal_temp_stack, filename = paste(output_directory, "/lethal_temp_", start, "_", end, "_", pest, ".tif", sep = ""), overwrite=TRUE, format = 'GTiff')
-  }
+
+  return(data)
 }
