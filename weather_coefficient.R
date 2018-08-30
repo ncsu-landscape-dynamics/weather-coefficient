@@ -79,11 +79,10 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
       tavg <- tmax
       for (j in 1:nlayers(tmax)){
         tavg[[j]] <- overlay(tmax[[j]], tmin[[j]], fun = function(r1, r2){return((r1+r2)/2)})
-        print(j)
       }
-      tmin_s <- stack(tmin, tmin_s)
-      tmax_s <- stack(tmax, tmax_s)
-      tavg_s <- stack(tavg, tavg_s)
+      tmin_s <- stack(tmin_s, tmin)
+      tmax_s <- stack(tmax_s, tmax)
+      tavg_s <- stack(tavg_s, tavg)
       if (lethal_temperature == 'YES') {
         lethal_index <- which(str_sub(names(tmin), 7,8) == lethal_month)
         lethal_rast <- tavg[[lethal_index]]
@@ -98,15 +97,19 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     print(i)
   }
   
-  if(temp_index == 'YES'){
+  if (temp_index == 'YES') {
     names(tavg_s) <- names(tmin_s)
   }
   
+  if (lethal_temperature == 'YES') {
+    names(lethal_temp_stack) <- unique(format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%Y"))
+  }
+  
   ## create indices based on timestep
-  if(prcp_index =='YES'){
+  if (prcp_index =='YES') {
     if(time_step == "daily"){
-      indices <- format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%d")
-      indices <- as.numeric(indices)
+      timestep_names <- format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%d")
+      indices <- as.numeric(timestep_names)
       indices_weather_ranking <- rep(1,365)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
@@ -114,18 +117,19 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
     } else if(time_step == "weekly"){
+      timestep_names <-  names(prcp[[seq(1,nlayers(prcp),7)]])
       indices <- rep(seq(1,((nlayers(prcp)/7)+1),1),7)
       indices <- indices[1:nlayers(prcp)]
       indices <- indices[order(indices)]
-      indices_weather_ranking <- rep(1,53)
+      indices_weather_ranking <- rep(1,52)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
         new_ind <- new_ind+1
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
     } else if(time_step == "monthly"){
-      indices <- format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%Y%m")
-      indices <- as.numeric(as.factor(indices))
+      timestep_names <- unique(format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%Y%m"))
+      indices <- as.numeric(as.factor(timestep_names))
       indices_weather_ranking <- rep(1,12)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
@@ -135,8 +139,8 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     }
   } else if(prcp_index =='NO'){
     if(time_step == "daily"){
-      indices <- format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%d")
-      indices <- as.numeric(indices)
+      timestep_names <- format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%d")
+      indices <- as.numeric(timestep_names)
       indices_weather_ranking <- rep(1,365)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
@@ -144,6 +148,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
     } else if(time_step == "weekly"){
+      timestep_names <-  names(prcp[[seq(1,nlayers(prcp),7)]])
       indices <- rep(seq(1,((nlayers(tavg_s)/7)+1),1),7)
       indices <- indices[1:nlayers(tavg_s)]
       indices <- indices[order(indices)]
@@ -154,8 +159,8 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
     } else if(time_step == "monthly"){
-      indices <- format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%Y%m")
-      indices <- as.numeric(as.factor(indices))
+      timestep_names <- unique(format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%Y%m"))
+      indices <- as.numeric(as.factor(timestep_names))
       indices_weather_ranking <- rep(1,12)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
@@ -165,23 +170,26 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     }
   }
   
-  ## Create temperature and/or precipitation indices if method is reclass
+  ## Create temperature and/or precipitation coefficients if method is reclass
   if (prcp_index == 'YES' && prcp_method == "reclass"){
     prcp_coeff <- reclassify(prcp,prcp_matrix)
     prcp_coeff <- stackApply(prcp_coeff, indices, fun=mean)
+    names(prcp_coeff) <- timestep_names
   }
   
   if (temp_index == 'YES' && temp_method == "reclass"){
     temp_coeff <- reclassify(tavg_s,temp_matrix)
     temp_coeff <- stackApply(temp_coeff, indices, fun=mean)
+    names(temp_coeff) <- timestep_names
   }
   
-  ## create temperature and/or precipitation indices from daymet data based on time-step and variables of interest
+  ## create temperature and/or precipitation coefficients from daymet data based on time-step and variables of interest if method is polynomial
   if (prcp_index == 'YES' && prcp_method == "polynomial"){
     prcp_coeff <- stackApply(prcp, indices, fun=mean)
     prcp_coeff <- prcp_a0 + (prcp_a1 * (prcp_coef  + prcp_x1mod)) + (prcp_a2 * (prcp_coef + prcp_x2mod)**2) + (prcp_a3 * (prcp_coef + prcp_x3mod)**3)
     prcp_coeff[prcp_coeff < 0] <- 0 # restrain lower limit to 0
     prcp_coeff[prcp_coeff > 1] <- 1 # restrain upper limit to 1
+    names(prcp_coeff) <- timestep_names
   }
   
   if (temp_index == 'YES' && temp_method == "polynomial"){
@@ -189,6 +197,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     temp_coeff <- temp_a0 + (temp_a1 * (temp_coeff + temp_x1mod)) + (temp_a2 * (temp_coeff + temp_x2mod)**2) + (temp_a3 * (temp_coeff + temp_x3mod)**3)
     temp_coeff[temp_coeff < 0] <- 0 # restrain lower limit to 0
     temp_coeff[temp_coeff > 1] <- 1 # restrain upper limit to 1
+    names(temp_coeff) <- timestep_names
   }
   
   if(future_scenarios == 'YES'){
