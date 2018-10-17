@@ -4,8 +4,8 @@ source("weather_coefficient.R")
 start <-  2014
 end <- 2017
 time_step <- "monthly"
-directory <- "G:/DaymetUS"
-output_directory <- "G:/DaymetUS/test"
+directory <- "H:/My Drive/PoPS and Tangible Landscape/DaymetUS"
+output_directory <- "H:/My Drive/PoPS and Tangible Landscape//DaymetUS/test"
 study_area = "states"
 states_of_interest <- c('Maryland')
 lethal_temperature <- 'YES' # YES or NO

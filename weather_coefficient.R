@@ -1,7 +1,6 @@
 ## Read in libraries
 library(rgdal)
 library(raster)
-library(ncdf4)
 library(sp)
 library(stringr)
 #library(googledrive)
@@ -51,8 +50,8 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   
   ## reference shapefile used to clip, project, and resample 
   if (study_area == "states"){
-    states <- readOGR("C:/Users/Chris/Desktop/states/us_states_lccproj.shp") # link to your local copy
-    reference_area <- states[states@data$STATE_NAME %in% states_of_interest,]
+    states <- readOGR("H:/My Drive/PoPS and Tangible Landscape/usa_boundaries/us_states_lccproj.shp") # link to your local copy
+    reference_area <- states[states$STATE_NAME %in% states_of_interest,]
     rm(states)
   } else if (study_area == "raster"){
     reference_area <- reference_area
