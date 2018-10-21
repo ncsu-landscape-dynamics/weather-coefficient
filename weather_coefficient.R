@@ -3,7 +3,7 @@ library(rgdal)
 library(raster)
 library(sp)
 library(stringr)
-#library(googledrive)
+library(ncdf4)
 
 weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
                                 reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01", future_scenarios = TRUE, lethal_min = 'YES',
@@ -52,7 +52,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   if (study_area == "states"){
     states <- readOGR("H:/My Drive/PoPS and Tangible Landscape/usa_boundaries/us_states_lccproj.shp") # link to your local copy
     reference_area <- states[states$STATE_NAME %in% states_of_interest,]
-    rm(states)
+    rm(states) # removes states file to save disk space
   } else if (study_area == "raster"){
     reference_area <- reference_area
   }
@@ -60,27 +60,44 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   for (i in 1:total_years) {
     ## Precipitation 
     if(prcp_index == 'YES'){
-      precip <- stack(paste(directory,"/",precip_files[[i]], sep = ""), varname = "prcp")
-      precip <- crop(precip, reference_area)
+      precip <- stack(paste(directory,"/",precip_files[[i]], sep = ""), varname = "prcp", quick = TRUE)
+      precip3 <- crop(precip[[1]],reference_area)
+      precip2 <- stack(precip3)
+      for(ind in 2:nlayers(precip)){
+        precip3 <- crop(precip[[ind]], reference_area)
+        precip2 <- stack(precip2, precip3)
+      }
       if (i>1 && compareCRS(precip,prcp) == FALSE) { precip@crs <- crs(prcp) }
-      prcp <- stack(prcp, precip)
-      rm(precip)
+      prcp <- stack(prcp, precip2)
+      rm(precip, precip2, precip3)
     }
 
     ## Temperature
     if(temp_index == 'YES'){
-      tmin <- stack(paste(directory, "/", tmin_files[[i]], sep =""), varname = "tmin")
-      tmin <- crop(tmin, reference_area)
-      if (i>1 && compareCRS(tmin,tmin_s) == FALSE) { tmin@crs <- crs(tmin_s) }
-      tmax <- stack(paste(directory, "/", tmax_files[[i]], sep = ""), varname = "tmax")
-      tmax <- crop(tmax, reference_area)
-      if (i>1 && compareCRS(tmax,tmax_s) == FALSE) { tmax@crs <- crs(tmax_s) }
-      tavg <- tmax
-      for (j in 1:nlayers(tmax)){
-        tavg[[j]] <- overlay(tmax[[j]], tmin[[j]], fun = function(r1, r2){return((r1+r2)/2)})
+      tmin <- stack(paste(directory, "/", tmin_files[[i]], sep =""), varname = "tmin", quick = TRUE)
+      tmin3 <- crop(tmin[[1]], reference_area)
+      tmin2 <- stack(tmin3)
+      if (i>1 && compareCRS(tmin2,tmin_s) == FALSE) { tmin@crs <- crs(tmin_s) }
+      tmax <- stack(paste(directory, "/", tmax_files[[i]], sep = ""), varname = "tmax", quick = TRUE)
+      tmax3 <- crop(tmax[[1]], reference_area)
+      tmax2 <- stack(tmax3)
+      tavg2 <- (tmin3+tmax3)/2
+      tavg <- stack(tavg2)
+      if (i>1 && compareCRS(tmax2,tmax_s) == FALSE) { tmax@crs <- crs(tmax_s) }
+      for (ind2 in 2:nlayers(tmin)){
+        tmin3 <- crop(tmin[[ind2]], reference_area)
+        tmax3 <- crop(tmax[[ind2]], reference_area)
+        tmin2 <- stack(tmin2, tmin3)
+        tmax2 <- stack(tmax2, tmax3)
+        tavg2 <- (tmin3+tmax3)/2
+        tavg <- stack(tavg, tavg2)
       }
-      tmin_s <- stack(tmin_s, tmin)
-      tmax_s <- stack(tmax_s, tmax)
+      # tavg <- tmax2
+      # for (j in 1:nlayers(tmax)){
+      #   tavg[[j]] <- overlay(tmax2[[j]], tmin2[[j]], fun = function(r1, r2){return((r1+r2)/2)})
+      # }
+      tmin_s <- stack(tmin_s, tmin2)
+      tmax_s <- stack(tmax_s, tmax2)
       tavg_s <- stack(tavg_s, tavg)
       if (lethal_temperature == 'YES') {
         lethal_index <- which(str_sub(names(tmin), 7,8) == lethal_month)
@@ -92,6 +109,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         } 
         lethal_temp_stack <- stack(lethal_temp_stack, lethal_temp)
       }
+      rm(tmin2, tmin, tmin3, tmax, tmax2, tmax3, tavg)
     }
     print(i)
   }
