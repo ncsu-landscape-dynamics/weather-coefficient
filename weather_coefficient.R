@@ -67,40 +67,38 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         precip3 <- crop(precip[[ind]], reference_area)
         precip2 <- stack(precip2, precip3)
       }
-      if (i>1 && compareCRS(precip,prcp) == FALSE) { precip@crs <- crs(prcp) }
+      if (i>1 && compareCRS(precip2,prcp) == FALSE) { projection(precip2) <- projection(prcp) }
       prcp <- stack(prcp, precip2)
       rm(precip, precip2, precip3)
     }
 
     ## Temperature
     if(temp_index == 'YES'){
-      tmin <- stack(paste(directory, "/", tmin_files[[i]], sep =""), varname = "tmin", quick = TRUE)
-      tmin3 <- crop(tmin[[1]], reference_area)
+      tmins <- stack(paste(directory, "/", tmin_files[[i]], sep =""), varname = "tmin", quick = TRUE)
+      tmin3 <- crop(tmins[[1]], reference_area)
       tmin2 <- stack(tmin3)
-      if (i>1 && compareCRS(tmin2,tmin_s) == FALSE) { tmin@crs <- crs(tmin_s) }
-      tmax <- stack(paste(directory, "/", tmax_files[[i]], sep = ""), varname = "tmax", quick = TRUE)
-      tmax3 <- crop(tmax[[1]], reference_area)
+      tmaxs <- stack(paste(directory, "/", tmax_files[[i]], sep = ""), varname = "tmax", quick = TRUE)
+      tmax3 <- crop(tmaxs[[1]], reference_area)
       tmax2 <- stack(tmax3)
       tavg2 <- (tmin3+tmax3)/2
       tavg <- stack(tavg2)
-      if (i>1 && compareCRS(tmax2,tmax_s) == FALSE) { tmax@crs <- crs(tmax_s) }
-      for (ind2 in 2:nlayers(tmin)){
-        tmin3 <- crop(tmin[[ind2]], reference_area)
-        tmax3 <- crop(tmax[[ind2]], reference_area)
+      for (ind2 in 2:nlayers(tmins)){
+        tmin3 <- crop(tmins[[ind2]], reference_area)
+        tmax3 <- crop(tmaxs[[ind2]], reference_area)
         tmin2 <- stack(tmin2, tmin3)
         tmax2 <- stack(tmax2, tmax3)
         tavg2 <- (tmin3+tmax3)/2
         tavg <- stack(tavg, tavg2)
       }
-      # tavg <- tmax2
-      # for (j in 1:nlayers(tmax)){
-      #   tavg[[j]] <- overlay(tmax2[[j]], tmin2[[j]], fun = function(r1, r2){return((r1+r2)/2)})
-      # }
+      if (i>1 && compareCRS(tmax2,tmax_s) == FALSE) { projection(tmax2) <- projection(tmax_s) }
+      if (i>1 && compareCRS(tmin2,tmin_s) == FALSE) { projection(tmin2) <- projection(tmin_s) }
+      if (i>1 && compareCRS(tavg,tavg_s) == FALSE) { projection(tavg) <- projection(tavg_s) } 
+        
       tmin_s <- stack(tmin_s, tmin2)
       tmax_s <- stack(tmax_s, tmax2)
       tavg_s <- stack(tavg_s, tavg)
       if (lethal_temperature == 'YES') {
-        lethal_index <- which(str_sub(names(tmin), 7,8) == lethal_month)
+        lethal_index <- which(str_sub(names(tmins), 7,8) == lethal_month)
         lethal_rast <- tavg[[lethal_index]]
         if(lethal_min == 'YES') {
           lethal_temp <- stackApply(lethal_rast, indices = rep(1,nlayers(lethal_rast)), fun=min)
@@ -109,7 +107,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         } 
         lethal_temp_stack <- stack(lethal_temp_stack, lethal_temp)
       }
-      rm(tmin2, tmin, tmin3, tmax, tmax2, tmax3, tavg)
+      rm(tmin2, tmins, tmin3, tmaxs, tmax2, tmax3, tavg)
     }
     print(i)
   }
@@ -119,7 +117,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   }
   
   if (lethal_temperature == 'YES') {
-    names(lethal_temp_stack) <- unique(format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%Y"))
+    names(lethal_temp_stack) <- unique(format(as.Date(names(tmin_s), format = "X%Y.%m.%d"), format = "%Y"))
   }
   
   ## create indices based on timestep
@@ -134,16 +132,25 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
     } else if(time_step == "weekly"){
-      timestep_names <-  names(prcp[[seq(1,nlayers(prcp),7)]])
-      indices <- rep(seq(1,((nlayers(prcp)/7)+1),1),7)
-      indices <- indices[1:nlayers(prcp)]
-      indices <- indices[order(indices)]
+      days = 7
+      normal_wc_py = floor(365/days)-1
+      final_number_days_in_timestep = 365-(days*normal_wc_py)
+      names_indices <- seq(1,(365-final_number_days_in_timestep+1),days)
+      names_indices2 <- names_indices
+      indices <- rep(seq(1,((365/days)-1),1),days)
+      indices <- append(indices, rep((max(indices+1)),final_number_days_in_timestep), after = length(indices))
+      indices3 <- indices
       indices_weather_ranking <- rep(1,52)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
         new_ind <- new_ind+1
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+        indices2 <- indices3+max(indices)
+        indices <- append(indices, indices2, after = length(indices))
+        names_indices2 <- names_indices2+365
+        names_indices <- append(names_indices, names_indices2, after = length(names_indices))
       }
+      timestep_names <-  names(prcp[[names_indices]])
     } else if(time_step == "monthly"){
       timestep_names <- unique(format(as.Date(names(prcp), format = "X%Y.%m.%d"), format = "%Y%m"))
       indices <- as.numeric(as.factor(timestep_names))
@@ -153,6 +160,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         new_ind <- new_ind+1
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
+      indices <- indices[order(indices)]
     }
   } else if(prcp_index =='NO'){
     if(time_step == "daily"){
@@ -165,16 +173,26 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
       }
     } else if(time_step == "weekly"){
-      timestep_names <-  names(prcp[[seq(1,nlayers(prcp),7)]])
-      indices <- rep(seq(1,((nlayers(tavg_s)/7)+1),1),7)
-      indices <- indices[1:nlayers(tavg_s)]
-      indices <- indices[order(indices)]
+      days = 7
+      normal_wc_py = floor(365/days)-1
+      final_number_days_in_timestep = 365-(days*normal_wc_py)
+      names_indices <- seq(1,(365-final_number_days_in_timestep+1),days)
+      names_indices2 <- names_indices
+      indices <- rep(seq(1,((365/days)-1),1),days)
+      indices <- append(indices, rep((max(indices+1)),final_number_days_in_timestep), after = length(indices))
+      indices3 <- indices
       indices_weather_ranking <- rep(1,53)
       new_ind <- indices_weather_ranking
       for (i in 2:total_years){
         new_ind <- new_ind+1
         indices_weather_ranking <- c(indices_weather_ranking, new_ind)
+        indices2 <- indices3+max(indices)
+        indices <- append(indices, indices2, after = length(indices))
+        names_indices2 <- names_indices2+365
+        names_indices <- append(names_indices, names_indices2, after = length(names_indices))
       }
+      indices <- indices[order(indices)]
+      timestep_names <-  names(tavg_s[[names_indices]])
     } else if(time_step == "monthly"){
       timestep_names <- unique(format(as.Date(names(tavg_s), format = "X%Y.%m.%d"), format = "%Y%m"))
       indices <- as.numeric(as.factor(timestep_names))
@@ -235,10 +253,16 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
     last_year <- as.numeric(substr(precip_files[[total_years]],16,19))
     weather_ranking <- data.frame(year = seq(first_year,last_year,1),index = seq(1,total_years,1), lethal_temp_area = rep(0,total_years), avg_temp_coeff = rep(0,total_years), avg_prcp_coeff = rep(0,total_years))
     for (i in 1:total_years) {
-      cta <- lethal_temp_area[[i]]
-      weather_ranking$lethal_temp_area[i] <- sum(cta[cta == 1])/ncell(cta)
-      weather_ranking$avg_temp_coeff[i] <- mean(getValues(temp_coeff_ranking[[i]]), na.rm = TRUE)
-      weather_ranking$avg_prcp_coeff[i] <- mean(getValues(prcp_coeff_ranking[[i]]), na.rm = TRUE)
+      if (lethal_temperature == 'YES'){
+        cta <- lethal_temp_area[[i]]
+        weather_ranking$lethal_temp_area[i] <- sum(cta[cta == 1])/ncell(cta)
+      } 
+      if (temp_index == 'YES') {
+        weather_ranking$avg_temp_coeff[i] <- mean(getValues(temp_coeff_ranking[[i]]), na.rm = TRUE)
+      }
+      if (prcp_index == 'YES') {
+        weather_ranking$avg_prcp_coeff[i] <- mean(getValues(prcp_coeff_ranking[[i]]), na.rm = TRUE)
+      }
     }
     if(prcp_index== 'YES' && temp_index == 'YES'){
       weather_ranking$total_coeff_score <- weather_ranking$avg_temp_coeff*weather_ranking$avg_prcp_coeff-(weather_ranking$lethal_temp_area*0.5)
@@ -278,17 +302,24 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
         low_spread_coeff_indices <- c(low_spread_coeff_indices,seq(1+12*(low_spread_indices[i]-1),12+12*(low_spread_indices[i]-1)))
       }
     }
-    high_spread_temp_coeff <- temp_coeff[[high_spread_coeff_indices]]
-    average_spread_temp_coeff <- temp_coeff[[average_spread_coeff_indices]]
-    low_spread_temp_coeff <- temp_coeff[[low_spread_coeff_indices]]
+    if (temp_index == 'YES'){
+      high_spread_temp_coeff <- temp_coeff[[high_spread_coeff_indices]]
+      average_spread_temp_coeff <- temp_coeff[[average_spread_coeff_indices]]
+      low_spread_temp_coeff <- temp_coeff[[low_spread_coeff_indices]]
+    }
     
-    high_spread_prcp_coeff <- prcp_coeff[[high_spread_coeff_indices]]
-    average_spread_prcp_coeff <- prcp_coeff[[average_spread_coeff_indices]]
-    low_spread_prcp_coeff <- prcp_coeff[[low_spread_coeff_indices]]
+    if (prcp_index == 'YES'){
+      high_spread_prcp_coeff <- prcp_coeff[[high_spread_coeff_indices]]
+      average_spread_prcp_coeff <- prcp_coeff[[average_spread_coeff_indices]]
+      low_spread_prcp_coeff <- prcp_coeff[[low_spread_coeff_indices]]
+    }
     
-    high_spread_lethal_temp <- lethal_temp_stack[[high_spread_indices]]
-    average_spread_lethal_temp <- lethal_temp_stack[[average_spread_indices]]
-    low_spread_lethal_temp <- lethal_temp_stack[[low_spread_indices]]
+    if (lethal_temperature == 'YES') {
+      high_spread_lethal_temp <- lethal_temp_stack[[high_spread_indices]]
+      average_spread_lethal_temp <- lethal_temp_stack[[average_spread_indices]]
+      low_spread_lethal_temp <- lethal_temp_stack[[low_spread_indices]]
+    }
+
   }
   
   ## create directory for writing files

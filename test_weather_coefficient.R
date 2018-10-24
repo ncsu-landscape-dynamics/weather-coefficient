@@ -3,7 +3,7 @@ source("weather_coefficient.R")
 
 start <-  2014
 end <- 2019
-time_step <- "monthly"
+time_step <- "weekly"
 directory <- "H:/My Drive/PoPS and Tangible Landscape/DaymetUS"
 output_directory <- "H:/My Drive/PoPS and Tangible Landscape//DaymetUS/test"
 study_area = "states"
@@ -26,7 +26,7 @@ prcp_x3mod = 0
 prcp_thresh = 2.5
 prcp_mat <- c(0, prcp_thresh, 0,  prcp_thresh, Inf, 1)
 prcp_matrix <- matrix(prcp_mat, ncol=3, byrow=TRUE)
-temp_index = 'NO'  # YES or NO
+temp_index = 'YES'  # YES or NO
 temp_method = "reclass"  # either reclass or polynomial
 temp_a0 = -0.066
 temp_a1 = 0.056
