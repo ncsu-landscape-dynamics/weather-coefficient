@@ -35,7 +35,7 @@ prcp_matrix <- matrix(prcp_mat, ncol=3, byrow=TRUE)
 [2,]  2.5  Inf    1
 ```
 ```R
-## Example of polynomial , also works for temp_matrix. matrix must to nx3 col1 = from, col2 = to, col3 = reclass value
+## Example of polynomial , works for both temp and prcp polynomials. 
 temp_a0 = -0.066
 temp_a1 = 0.056
 temp_a2 = -0.0036
@@ -48,24 +48,24 @@ temp = seq(0,30, 1)
 temp_coeff = temp_a0 + temp_a1*(temp + temp_x1mod) + temp_a2*((temp + temp_x2mod)^2) + temp_a3*((temp + temp_x3mod)^3)
 plot(temp, temp_coeff)
 ```
-![Image of Plot](weather-coefficient/temp_coeff_plot_example.jpeg)
-* prcp_a0 - **
-* prcp_a1 
-* prcp_a2 
-* prcp_a3 
-* prcp_x1mod 
-* prcp_x2mod 
-* prcp_x3mod 
+![picture](https://github.com/ncsu-landscape-dynamics/weather-coefficient/blob/Release/temp_coeff_plot_example.jpeg)
+
+* prcp_a0 - **only used if prcp_method = 'polynomial'**
+* prcp_a1 - **only used if prcp_method = 'polynomial'**
+* prcp_a2 - **only used if prcp_method = 'polynomial'**
+* prcp_a3 - **only used if prcp_method = 'polynomial'**
+* prcp_x1mod - **only used if prcp_method = 'polynomial'**
+* prcp_x2mod - **only used if prcp_method = 'polynomial'**
+* prcp_x3mod - **only used if prcp_method = 'polynomial'**
 
 
-* temp_a0 
-* temp_a1 
-* temp_a2 
-* temp_a3 
-* temp_x1mod 
-* temp_x2mod 
-* temp_x3mod 
-
+* temp_a0 - **only used if temp_method = 'polynomial'**
+* temp_a1 - **only used if temp_method = 'polynomial'**
+* temp_a2 - **only used if temp_method = 'polynomial'**
+* temp_a3 - **only used if temp_method = 'polynomial'**
+* temp_x1mod - **only used if temp_method = 'polynomial'**
+* temp_x2mod - **only used if temp_method = 'polynomial'**
+* temp_x3mod - **only used if temp_method = 'polynomial'**
 
 ## Authors
 
