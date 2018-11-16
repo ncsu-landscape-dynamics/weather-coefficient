@@ -6,6 +6,7 @@ library(stringr)
 library(ncdf4)
 
 weather_coefficient <- function(directory, output_directory, start, end, time_step, study_area = "states", states_of_interest= c('California'), 
+                                states_file = "H:/My Drive/PoPS and Tangible Landscape/usa_boundaries/us_states_lccproj.shp",
                                 reference_area = NULL, pest, lethal_temperature = 'NO', lethal_month = "01", future_scenarios = TRUE, lethal_min = 'YES',
                                 prcp_index = 'NO', prcp_method = "reclass",  prcp_a0 = 0, prcp_a1 = 0, prcp_a2 = 0, prcp_a3 = 0, 
                                 prcp_matrix = 0, prcp_x1mod = 0, prcp_x2mod = 0, prcp_x3mod = 0, lethal_temperature_value = NULL,
@@ -50,7 +51,7 @@ weather_coefficient <- function(directory, output_directory, start, end, time_st
   
   ## reference shapefile used to clip, project, and resample 
   if (study_area == "states"){
-    states <- readOGR("H:/My Drive/PoPS and Tangible Landscape/usa_boundaries/us_states_lccproj.shp") # link to your local copy
+    states <- readOGR(states_file) # link to your local copy
     reference_area <- states[states$STATE_NAME %in% states_of_interest,]
     rm(states) # removes states file to save disk space
   } else if (study_area == "raster"){

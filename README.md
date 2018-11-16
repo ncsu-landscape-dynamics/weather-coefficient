@@ -12,6 +12,8 @@ Parameter - **Meaning and/or (Options)**
 * output_directory - **Output directory you want the function to write the weather coefficient files to**
 * study_area - **Use raster for predefined areas and states if you want your data for whole states ("states" or "raster")**
 * states_of_interest - **only used if study_area = "states" (eg: "California")**
+* states_file - **only used if study_area = "states". This is the location of your states shapefile. Needs to be in same projection as Daymet data (Lambert Conformal Conic)**
+* reference_area - **only used if study_area = "raster". This should be the boundary of your study area and in same projection as Daymet data (Lambert Conformal Conic)**
 * lethal_temperature - **(YES or NO)**
 * lethal_month - **(between "01" and "12")**
 * lethal_min - **Does your specie experience mortality below a certain temperature ("YES" or "NO")**
