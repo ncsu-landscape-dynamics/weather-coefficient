@@ -1,4 +1,4 @@
-# weather-coefficient
+# Weather coefficient creation for PoPS <img src="www/PoPS_Logo.png" align="right" width="14%" />
 
 ## Overview
 weather coefficient converts raw weather data from Daymet to weather coefficients used in the [PoPS model](https://github.com/ncsu-landscape-dynamics/PoPS).
@@ -71,3 +71,7 @@ plot(temp, temp_coeff)
 
 * Chris Jones
 * Devon Gaydos (Oregon_test)
+
+## License
+
+Permission to use, copy, modify, and distribute this software and its documentation under the terms of the GNU General Public License is hereby granted. No representations are made about the suitability of this software for any purpose. It is provided "as is" without express or implied warranty. See the GNU General Public License for more details.
