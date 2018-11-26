@@ -28,7 +28,8 @@ Parameter - **Meaning and/or (Options)**
 ```R
 ## Example prcp_matrix creation, also works for temp_matrix. matrix must to nx3 col1 = from, col2 = to, col3 = reclass value
 prcp_thresh = 2.5
-prcp_mat <- c(0, prcp_thresh, 0,  prcp_thresh, Inf, 1)
+prcp_mat <- c(0, prcp_thresh, 0,  
+              prcp_thresh, Inf, 1)
 prcp_matrix <- matrix(prcp_mat, ncol=3, byrow=TRUE)
      [,1] [,2] [,3]
 [1,]  0.0  2.5    0
