@@ -16,7 +16,7 @@ Parameter - **Meaning and/or (Options)**
 * lethal_month - **(between "01" and "12")**
 * lethal_min - **Does your specie experience mortality below a certain temperature ("YES" or "NO")**
 * lethal_temperature_value - **The value that your species experiences mortality**
-* future_scenarios - **('YES', 'NO')**
+* future_scenarios - **Used to create best, average, adn worst case weather scenarios from the historical record. Set to yes if you are projecting into the future for prediction purposes. ('YES', 'NO')**
 * pest - **The name of the pest or pathogen the weather coefficients are to be used for. Naming purposes only. (eg: "SOD")**
 * prcp_index - **Does precipitation affect the survival and reproduction of your pest/pathogen ('YES' or 'NO')**
 * prcp_method - **Method used to convert raw data to precipitation coefficients ('reclass' or 'polynomial')**
